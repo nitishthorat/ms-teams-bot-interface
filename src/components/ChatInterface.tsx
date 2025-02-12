@@ -6,6 +6,7 @@ interface Bot {
   name: string;
   description: string;
   endpoint: string;
+  appId: string;
 }
 
 const ChatInterface: React.FC = () => {
@@ -36,8 +37,11 @@ const ChatInterface: React.FC = () => {
           id: bot.id,
           name: bot.name,
           description: bot.properties.displayName || "No description available",
+          appId: bot.properties.msaAppId,
           endpoint: bot.properties.endpoint,
         }));
+
+        console.log(data);
 
         setBots(botList);
         setSelectedBot(botList[0]);
@@ -118,7 +122,7 @@ const ChatInterface: React.FC = () => {
             <li
               key={bot.id}
               onClick={() => handleBotSelect(bot)}
-              className={`p-2 cursor-pointer rounded-md ${
+              className={`p-2 cursor-pointer rounded-md flex items-center justify-between ${
                 selectedBot?.id === bot.id
                   ? "bg-indigo-600 text-white"
                   : "bg-white text-gray-800 hover:bg-gray-200"
@@ -132,12 +136,16 @@ const ChatInterface: React.FC = () => {
               >
                 {bot.name}
               </span>
-              <button
-                onClick={() => handleAddToTeams(bot)}
-                className="ml-2 px-3 py-1 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700"
+              <a
+                href={`https://teams.microsoft.com/l/chat/0/0?users=28:${bot.appId}`}
+                className="ml-2"
               >
-                Add to Teams
-              </button>
+                <img
+                  src="https://dev.botframework.com/Client/Images/Add-To-MSTeams-Buttons.png"
+                  alt="Add to Teams"
+                  className="w-24 h-auto" // Adjust width as needed
+                />
+              </a>
             </li>
           ))}
         </ul>
