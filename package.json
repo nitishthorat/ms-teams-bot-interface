@@ -19,7 +19,8 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.75.0",
     "react": "19.0.0-rc-66855b96-20241106",
-    "react-dom": "19.0.0-rc-66855b96-20241106"
+    "react-dom": "19.0.0-rc-66855b96-20241106",
+    "restify": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -41,8 +41,6 @@ const ChatInterface: React.FC = () => {
           endpoint: bot.properties.endpoint,
         }));
 
-        console.log(data);
-
         setBots(botList);
         setSelectedBot(botList[0]);
       } catch (error) {
