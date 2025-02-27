@@ -15,12 +15,87 @@ adapter.onTurnError = async (context: TurnContext, error: Error) => {
 
 // ✅ Main Bot Logic
 const handleIncomingMessage = async (context: TurnContext) => {
-  const userMessage = context.activity.text; // Extract user message
-  console.log("🟢 Received Message:", userMessage);
+  if (context.activity.type !== "message") {
+    console.log("🟡 Ignoring non-message activity.");
+    return;
+  }
 
-  // ✅ Respond with a static message
-  const replyText = "Hello! This is a static response from the bot.";
-  await context.sendActivity(MessageFactory.text(replyText));
+  console.log(
+    "🟢 Received Message:",
+    JSON.stringify(context.activity, null, 2)
+  );
+
+  if (context.activity.attachments && context.activity.attachments.length > 0) {
+    const attachment = context.activity.attachments[0];
+
+    console.log("📂 Received Attachment:", JSON.stringify(attachment, null, 2));
+
+    if (!attachment.contentType) {
+      await context.sendActivity("⚠️ Attachment missing content type.");
+      return;
+    }
+
+    // ✅ Handling Microsoft Teams File Attachments
+    if (attachment.contentType === "text/html") {
+      await context.sendActivity(`Static message from MS teams`);
+
+      return;
+    }
+    if (
+      attachment.contentType ===
+      "application/vnd.microsoft.teams.file.download.info"
+    ) {
+      console.log("📂 Detected a Teams File attachment.");
+
+      // Extract download URL
+      const fileInfo = attachment.content as any;
+      if (fileInfo && fileInfo.downloadUrl) {
+        console.log("🔗 File Download URL:", fileInfo.downloadUrl);
+
+        // ✅ Send a message with the download link instead of an attachment
+        await context.sendActivity(
+          `📎 Here is your file: [${attachment.name}](${fileInfo.downloadUrl})`
+        );
+      } else {
+        console.error("❌ Missing download URL in Teams file attachment.");
+        await context.sendActivity(
+          "⚠️ Unable to retrieve file. No download URL found."
+        );
+      }
+      return;
+    }
+
+    // ✅ List of supported attachment types (for non-Teams specific files)
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "application/pdf",
+      "application/vnd.ms-excel",
+    ];
+
+    if (!allowedTypes.includes(attachment.contentType)) {
+      console.error("❌ Unsupported attachment type:", attachment.contentType);
+      await context.sendActivity(
+        `⚠️ Unsupported file type: ${attachment.contentType}`
+      );
+      return;
+    }
+
+    // ✅ Send back the attachment for other supported formats
+    const reply = MessageFactory.attachment({
+      contentType: attachment.contentType,
+      contentUrl: attachment.contentUrl,
+      name: attachment.name,
+    });
+
+    await context.sendActivity(reply);
+  } else {
+    // ✅ Respond with a static message
+    await context.sendActivity(
+      "Hello! This is a static response from the bot."
+    );
+  }
 };
 
 // ✅ Next.js API Route Handler

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "version": "1.0.0",
+  "manifestVersion": "1.19",
+  "id": "e8233044-6dea-4f54-b15a-83c96512a43c",
+  "name": { "short": "Final Bot", "full": "Final Bot" },
+  "developer": {
+    "name": "Lawme",
+    "mpnId": "",
+    "websiteUrl": "https://5b5f-2601-642-4e00-50-fc01-d442-e6ad-c807.ngrok-free.app",
+    "privacyUrl": "https://5b5f-2601-642-4e00-50-fc01-d442-e6ad-c807.ngrok-free.app",
+    "termsOfUseUrl": "https://5b5f-2601-642-4e00-50-fc01-d442-e6ad-c807.ngrok-free.app"
+  },
+  "description": { "short": "Short description", "full": "Long description" },
+  "icons": { "outline": "outline.png", "color": "color.png" },
+  "accentColor": "#FFFFFF",
+  "validDomains": [],
+  "webApplicationInfo": {
+    "id": "38a8db30-65e9-4158-87ac-353936ef4466",
+    "resource": ""
+  },
+  "bots": [
+    {
+      "botId": "77c236b5-60e3-465b-9fd0-6254b9ef1dd0",
+      "scopes": ["team", "personal", "groupChat"],
+      "supportsFiles": true,
+      "supportsCalling": false,
+      "supportsVideo": true
+    }
+  ],
+  "composeExtensions": [
+    {
+      "botId": "77c236b5-60e3-465b-9fd0-6254b9ef1dd0",
+      "commands": [
+        {
+          "id": "exampleCmd1",
+          "title": "Example Command",
+          "type": "query",
+          "context": ["compose", "commandBox"],
+          "description": "Example command description",
+          "initialRun": true,
+          "fetchTask": false
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["yourbot.azurewebsites.net"],
+  "defaultInstallScope": "team",
+  "defaultGroupCapability": {
+    "team": "bot",
+    "groupchat": "bot"
+  }
+}
