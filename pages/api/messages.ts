@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { BotFrameworkAdapter, TurnContext, MessageFactory } from "botbuilder";
+import { verifyBotRequest } from "./verifyBotRequest";
 
 // ✅ Set up Bot Adapter
 const adapter = new BotFrameworkAdapter({
@@ -105,6 +106,7 @@ export default async function handler(
 ) {
   console.log("👀 Bot endpoint hit with method:", req.method);
   console.log("👀 Request body:", JSON.stringify(req.body, null, 2));
+  await verifyBotRequest(req);
 
   // ✅ CORS Headers
   res.setHeader("Access-Control-Allow-Origin", "*");
