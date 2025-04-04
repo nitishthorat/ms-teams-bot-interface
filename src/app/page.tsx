@@ -15,27 +15,7 @@ const HomePage = () => {
 
   const toggleModal = () => setIsModalOpen(!isModalOpen);
 
-  useEffect(() => {
-    const fetchTokensFromAPI = async () => {
-      try {
-        const response = await fetch("/api/token");
-        if (!response.ok) {
-          throw new Error(`Error fetching tokens: ${response.statusText}`);
-        }
-        const { graphToken, azureToken } = await response.json();
-
-        // Store tokens in localStorage
-        localStorage.setItem("graphToken", graphToken.access_token);
-        localStorage.setItem("azureToken", azureToken.access_token);
-
-        console.log("Tokens stored in localStorage.");
-      } catch (error) {
-        console.error("Failed to fetch tokens from API:", error);
-      }
-    };
-
-    fetchTokensFromAPI();
-  }, []);
+  useEffect(() => {}, []);
 
   return (
     <div className="h-screen flex flex-col">

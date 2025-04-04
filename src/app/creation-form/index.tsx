@@ -16,9 +16,74 @@ const CreationForm = () => {
   const [longDescription, setLongDescription] = useState("");
   const [outlineIcon, setOutlineIcon] = useState<File | null>(null);
   const [colorIcon, setColorIcon] = useState<File | null>(null);
+  const [azureTenantId, setAzureTenantId] = useState("");
+  const [azureSubscriptionId, setAzureSubscriptionId] = useState("");
+  const [azureClientId, setAzureClientId] = useState("");
+  const [azureClientSecret, setAzureClientSecret] = useState("");
+  const [step, setStep] = useState(1);
+  const [msaAppId, setMsaAppId] = useState("");
+  const [azureResourceGroup, setAzureResourceGroup] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [botResponse, setBotResponse] = useState("");
+
+  const fetchTokensFromAPI = async (
+    tenantId: string,
+    clientId: string,
+    clientSecret: string
+  ) => {
+    try {
+      const response = await fetch("/api/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tenantId, clientId, clientSecret }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error fetching tokens: ${response.statusText}`);
+      }
+
+      const { graphToken, azureToken } = await response.json();
+
+      localStorage.setItem("graphToken", graphToken.access_token);
+      localStorage.setItem("azureToken", azureToken.access_token);
+      console.log("Tokens stored in localStorage.");
+    } catch (error) {
+      console.error("Failed to fetch tokens from API:", error);
+    }
+  };
+
+  const nextStep = (event: any) => {
+    if (step === 1) {
+      // Check if we have the Azure Tenant, Subscription id, Primary Application Client Id and Client Secret in our db
+      // If No: Create a primary application in their azure tenant and get the application id and the client secret, store in the db
+
+      fetchTokensFromAPI(azureTenantId, azureClientId, azureClientSecret)
+        .then(() => {
+          setStep(2);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } else if (step === 2) {
+      createBot(event);
+    }
+  };
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const createPrimaryApplication = () => {
+    const azureToken = localStorage.getItem("azureToken") || "";
+    const graphToken = localStorage.getItem("graphToken") || "";
+
+    const formData = {
+      azureTenantId: azureTenantId,
+      azureSubscriptionId: azureSubscriptionId,
+      azureToken: azureToken,
+      graphToken: graphToken,
+    };
+  };
 
   // Handle file selection and validation
   const handleFileChange = (
@@ -79,7 +144,6 @@ const CreationForm = () => {
   const createManifestPackage = async (botId: string): Promise<Buffer> => {
     try {
       console.log("In create app manifest");
-      console.log(`Bot id: ${botId}`);
       const manifestId = uuidv4();
 
       // ✅ Step 1: Construct the manifest JSON dynamically
@@ -188,140 +252,257 @@ const CreationForm = () => {
       <h1 className="text-xl font-bold text-gray-800 mb-4">
         Create MS Teams Bot
       </h1>
+      <div className="mb-4 text-center font-semibold text-lg">
+        Step {step} of 2
+      </div>
       <form onSubmit={createBot} className="space-y-4">
+        {step === 1 && (
+          <div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Tenant ID</label>
+              <input
+                type="text"
+                name="tenantId"
+                value={azureTenantId}
+                onChange={(e) => setAzureTenantId(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder="e.g., 12345678-aaaa-bbbb-cccc-1234567890ab"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Subscription ID</label>
+              <input
+                type="text"
+                name="subscriptionId"
+                value={azureSubscriptionId}
+                onChange={(e) => setAzureSubscriptionId(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder="e.g., abcdef12-3456-7890-abcd-ef1234567890"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Client ID</label>
+              <input
+                type="text"
+                name="clientId"
+                value={azureClientId}
+                onChange={(e) => setAzureClientId(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder="e.g., abcdef12-3456-7890-abcd-ef1234567890"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Client Secret</label>
+              <input
+                type="text"
+                name="clientSecret"
+                value={azureClientSecret}
+                onChange={(e) => setAzureClientSecret(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder="e.g., abcdef12-3456-7890-abcd-ef1234567890"
+                required
+              />
+            </div>
+
+            <button
+              className={`w-full py-2 px-4 rounded-md text-white transition ${
+                azureTenantId && azureSubscriptionId
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
+              onClick={nextStep}
+              disabled={
+                !azureTenantId ||
+                !azureSubscriptionId ||
+                !azureClientId ||
+                !azureClientSecret
+              }
+            >
+              Next Step
+            </button>
+          </div>
+        )}
+
         {/* Bot Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Bot Name:
-          </label>
-          <input
-            type="text"
-            value={botName}
-            onChange={(e) => setBotName(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
 
-        {/* Developer Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Developer Name:
-          </label>
-          <input
-            type="text"
-            value={developerName}
-            onChange={(e) => setDeveloperName(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+        {step === 2 && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Bot Name:
+              </label>
+              <input
+                type="text"
+                value={botName}
+                onChange={(e) => setBotName(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Website URL */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Website URL:
-          </label>
-          <input
-            type="url"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Developer Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Developer Name:
+              </label>
+              <input
+                type="text"
+                value={developerName}
+                onChange={(e) => setDeveloperName(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Privacy URL */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Privacy Policy URL:
-          </label>
-          <input
-            type="url"
-            value={privacyUrl}
-            onChange={(e) => setPrivacyUrl(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Website URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Website URL:
+              </label>
+              <input
+                type="url"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Terms of Use URL */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Terms of Use URL:
-          </label>
-          <input
-            type="url"
-            value={termsUrl}
-            onChange={(e) => setTermsUrl(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Privacy URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Privacy Policy URL:
+              </label>
+              <input
+                type="url"
+                value={privacyUrl}
+                onChange={(e) => setPrivacyUrl(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Short Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Short Description:
-          </label>
-          <input
-            type="text"
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Terms of Use URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Terms of Use URL:
+              </label>
+              <input
+                type="url"
+                value={termsUrl}
+                onChange={(e) => setTermsUrl(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Long Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Long Description:
-          </label>
-          <textarea
-            value={longDescription}
-            onChange={(e) => setLongDescription(e.target.value)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Short Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Short Description:
+              </label>
+              <input
+                type="text"
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Outline Icon (PNG) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Outline Icon (PNG only):
-          </label>
-          <input
-            type="file"
-            accept="image/png"
-            onChange={(e) => handleFileChange(e, setOutlineIcon)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Long Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Long Description:
+              </label>
+              <textarea
+                value={longDescription}
+                onChange={(e) => setLongDescription(e.target.value)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
 
-        {/* Color Icon (PNG) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Color Icon (PNG only):
-          </label>
-          <input
-            type="file"
-            accept="image/png"
-            onChange={(e) => handleFileChange(e, setColorIcon)}
-            required
-            className="mt-1 block w-full p-2 border rounded-md"
-          />
-        </div>
+            {/* Outline Icon (PNG) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Outline Icon (PNG only):
+              </label>
+              <input
+                type="file"
+                accept="image/png"
+                onChange={(e) => handleFileChange(e, setOutlineIcon)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
+
+            {/* Color Icon (PNG) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Color Icon (PNG only):
+              </label>
+              <input
+                type="file"
+                accept="image/png"
+                onChange={(e) => handleFileChange(e, setColorIcon)}
+                required
+                className="mt-1 block w-full p-2 border rounded-md"
+              />
+            </div>
+            <button
+              className={`w-full py-2 px-4 rounded-md text-white transition ${
+                azureTenantId && azureSubscriptionId
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
+              onClick={nextStep}
+              disabled={
+                !azureTenantId ||
+                !azureSubscriptionId ||
+                !azureClientId ||
+                !azureClientSecret
+              }
+            >
+              Next Step
+            </button>
+          </>
+        )}
+
+        {step === 3 && msaAppId && (
+          <>
+            <div>Bot created!</div>
+            <div>
+              Please go to{" "}
+              <a
+                href={`https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/CallAnAPI/appId/${msaAppId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                Azure API Permissions
+              </a>{" "}
+              and grant admin consent to the permissions
+            </div>
+            <div>
+              Please go to the Azure Bot channels in your Azure Tenant and
+              enable the Teams channel and use the manifest package to upload
+              the bot in your teams environment.
+            </div>
+          </>
+        )}
 
         {/* Submit Button */}
-        <button
+        {/* <button
           type="submit"
           disabled={loading}
           className="w-full py-2 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition"
         >
           {loading ? "Uploading Bot Data..." : "Submit Bot Details"}
-        </button>
+        </button> */}
       </form>
 
       {/* Display Response Message */}
