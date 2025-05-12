@@ -20,6 +20,7 @@ const CreationForm = () => {
   const [azureSubscriptionId, setAzureSubscriptionId] = useState("");
   const [azureClientId, setAzureClientId] = useState("");
   const [azureClientSecret, setAzureClientSecret] = useState("");
+  const [azureDomainContext, setAzureDomainContext] = useState("");
   const [step, setStep] = useState(1);
   const [msaAppId, setMsaAppId] = useState("");
   const [azureResourceGroup, setAzureResourceGroup] = useState("");
@@ -49,7 +50,6 @@ const CreationForm = () => {
 
       localStorage.setItem("graphToken", graphToken.access_token);
       localStorage.setItem("azureToken", azureToken.access_token);
-      console.log("Tokens stored in localStorage.");
     } catch (error) {
       console.error("Failed to fetch tokens from API:", error);
     }
@@ -57,9 +57,6 @@ const CreationForm = () => {
 
   const nextStep = (event: any) => {
     if (step === 1) {
-      // Check if we have the Azure Tenant, Subscription id, Primary Application Client Id and Client Secret in our db
-      // If No: Create a primary application in their azure tenant and get the application id and the client secret, store in the db
-
       fetchTokensFromAPI(azureTenantId, azureClientId, azureClientSecret)
         .then(() => {
           setStep(2);
@@ -69,6 +66,7 @@ const CreationForm = () => {
         });
     } else if (step === 2) {
       createBot(event);
+      setStep(3);
     }
   };
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
@@ -125,11 +123,11 @@ const CreationForm = () => {
       });
 
       const data = await res.json();
-
+      console.log(data);
       if (res.ok) {
         setBotResponse("Bot successfully created in Azure!");
-        console.log("Azure Bot Creation Data:", data);
-        const zipBuffer = await createManifestPackage(data.msaAppId);
+        setMsaAppId(data.msaAppId);
+        setBotName(data.botName);
       } else {
         setBotResponse(`Error: ${data.error || "Failed to create bot"}`);
       }
@@ -253,7 +251,7 @@ const CreationForm = () => {
         Create MS Teams Bot
       </h1>
       <div className="mb-4 text-center font-semibold text-lg">
-        Step {step} of 2
+        Step {step} of 3
       </div>
       <form onSubmit={createBot} className="space-y-4">
         {step === 1 && (
@@ -303,6 +301,30 @@ const CreationForm = () => {
                 onChange={(e) => setAzureClientSecret(e.target.value)}
                 className="w-full border px-3 py-2 rounded"
                 placeholder="e.g., abcdef12-3456-7890-abcd-ef1234567890"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Domain Context</label>
+              <input
+                type="text"
+                name="domainContext"
+                value={azureDomainContext}
+                onChange={(e) => setAzureDomainContext(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder=""
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Azure Resource Group</label>
+              <input
+                type="text"
+                name="resourceGroup"
+                value={azureResourceGroup}
+                onChange={(e) => setAzureResourceGroup(e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+                placeholder=""
                 required
               />
             </div>
@@ -488,10 +510,23 @@ const CreationForm = () => {
               and grant admin consent to the permissions
             </div>
             <div>
-              Please go to the Azure Bot channels in your Azure Tenant and
-              enable the Teams channel and use the manifest package to upload
-              the bot in your teams environment.
+              Please go to{" "}
+              <a
+                href={`https://portal.azure.com/#@${azureDomainContext}/resource/subscriptions/${azureSubscriptionId}/resourceGroups/${azureResourceGroup}/providers/Microsoft.BotService/botServices/${botName}/channelsReact`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                Azure API Permissions
+              </a>{" "}
+              and grant admin consent to the permissions
             </div>
+            <button
+              className={`w-full py-2 px-4 rounded-md text-white transition bg-indigo-600 hover:bg-indigo-700`}
+              onClick={() => createManifestPackage(msaAppId)}
+            >
+              Download Manifest Package
+            </button>
           </>
         )}
 

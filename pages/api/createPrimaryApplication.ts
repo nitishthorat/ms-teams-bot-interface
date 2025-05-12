@@ -1,8 +1,18 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
-const AZURE_MANAGEMENT_API_URL = "https://management.azure.com";
-const SUBSCRIPTION_ID = process.env.SUBSCRIPTION_ID || "";
-const RESOURCE_GROUP = process.env.RESOURCE_GROUP || "";
+type CreatePrimaryAppRequest = {
+  tenantId: string;
+  subscriptionId: string;
+};
+
+type CreatePrimaryAppResponse = {
+  message: string;
+  data?: {
+    appId: string;
+    tenantId: string;
+    subscriptionId: string;
+  };
+};
 
 const apiPermissions = [
   {
@@ -45,70 +55,42 @@ const apiPermissions = [
     id: "b98bfd41-87c6-45cc-b104-e2de4f0dafb9",
     type: "Scope",
   },
-  {
-    id: "19dbc75e-c2e2-444c-a770-ec69d8559fc7",
-    type: "Role",
-  },
 ];
 
-// Disable Next.js built-in body parser (since we're handling multipart/form-data manually)
-
-export default async function handler(
+export default function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<CreatePrimaryAppResponse>
 ) {
-  console.log(`Form Data: ${req.body}`);
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ message: "Method not allowed" });
+  }
+
+  const { tenantId, subscriptionId } = req.body as CreatePrimaryAppRequest;
+
+  if (!tenantId || !subscriptionId) {
+    return res.status(400).json({
+      message: "Both tenantId and subscriptionId are required.",
+    });
   }
 
   try {
-    // Manually parse the incoming form-data request
-    const formData = JSON.parse(req.body);
-    console.log(formData);
+    // Mocking creation of a primary app (could be database entry or Azure SDK integration)
+    const appId = `app-${Date.now()}`;
 
-    // Extract required fields
-    const botName = formData.botName;
-    const shortDescription = formData.shortDescription;
-    const azureToken = formData.azureToken;
-    const graphToken = formData.graphToken;
-
-    // Validate required fields
-    if (!graphToken)
-      return res.status(400).json({ error: "Graph Token is required." });
-    if (!botName)
-      return res.status(400).json({ error: "Bot Name is required." });
-    if (!azureToken)
-      return res.status(400).json({ error: "Azure Token is required." });
-
-    console.log(graphToken);
-
-    // Step 1: Create Azure Application
-    const appData = await createAzureApp(graphToken, botName);
-    console.log("✅ Azure App Created:", appData);
-
-    // Step 2: Register Bot in Azure
-    const botData = await createBotRegistration(
-      azureToken,
-      botName,
-      shortDescription,
-      appData.appId
-    );
-    console.log("🤖 Bot Registration Successful:", botData);
-
-    // Respond with success data
     return res.status(200).json({
-      message: "Bot successfully created!",
-      msaAppId: appData.appId,
-      botName: botData.name,
+      message: "Primary application created successfully.",
+      data: {
+        appId,
+        tenantId,
+        subscriptionId,
+      },
     });
   } catch (error) {
-    console.error("❌ Error creating bot:", error);
-    return res.status(500).json({ error: "Failed to create bot" });
+    console.error("Error creating primary app:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 }
 
-// Function to create an Azure App
 async function createAzureApp(graphToken: string, botName: string) {
   try {
     const createAppResponse = await fetch(
@@ -188,52 +170,6 @@ async function generateClientSecret(graphToken: string, objectId: string) {
     return secretData.secretText; // ✅ Only returned once, cannot be retrieved again!
   } catch (error) {
     console.error("❌ Error generating client secret:", error);
-    throw error;
-  }
-}
-
-// Function to register bot in Azure
-async function createBotRegistration(
-  azureToken: string,
-  botName: string,
-  botDescription: string,
-  appId: string
-): Promise<any> {
-  const endpoint = `${AZURE_MANAGEMENT_API_URL}/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.BotService/botServices/${botName}-${Date.now()}?api-version=2021-03-01`;
-  console.log("App id: ", appId);
-  try {
-    const response = await fetch(endpoint, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${azureToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        location: "global",
-        kind: "registration",
-        sku: { name: "F0" },
-        properties: {
-          displayName: botName,
-          description: botDescription,
-          endpoint:
-            "https://5b5f-2601-642-4e00-50-fc01-d442-e6ad-c807.ngrok-free.app/api/messages", // Update with correct bot endpoint
-          msaAppId: appId,
-          runtimeVersion: "v4.0",
-        },
-      }),
-    });
-
-    console.log(response.statusText);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to create Bot Registration: ${await response.text()}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("❌ Error creating bot registration:", error);
     throw error;
   }
 }
